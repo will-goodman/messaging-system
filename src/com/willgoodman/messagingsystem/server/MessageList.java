@@ -1,4 +1,6 @@
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.server;
+
+import com.willgoodman.messagingsystem.Report;
 
 import java.util.ArrayList;
 import java.util.concurrent.*;

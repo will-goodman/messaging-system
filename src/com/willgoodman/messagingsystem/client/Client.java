@@ -1,9 +1,12 @@
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.client;
 
 // Usage:
 //        java Client server-hostname
 //
 
+
+import com.willgoodman.messagingsystem.Port;
+import com.willgoodman.messagingsystem.Report;
 
 import java.io.*;
 import java.net.*;
@@ -13,8 +16,6 @@ import java.security.PublicKey;
 import java.security.PrivateKey;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-
-import javax.crypto.Cipher;
 
 class Client {
   
@@ -50,7 +51,7 @@ class Client {
 
         String threadName = "";
         try {
-            server = new Socket(hostname, Port.number); 
+            server = new Socket(hostname, Port.number);
             toServer = new PrintStream(server.getOutputStream());
             fromServer = new BufferedReader(new InputStreamReader(server.getInputStream()));
             threadName = fromServer.readLine();

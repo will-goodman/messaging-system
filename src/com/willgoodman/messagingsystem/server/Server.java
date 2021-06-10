@@ -4,7 +4,9 @@
 // There is no provision for ending the server gracefully.  It will
 // end if (and only if) something exceptional happens.
 
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.server;
+
+import com.willgoodman.messagingsystem.*;
 
 import java.net.*;
 import java.io.*;
@@ -12,7 +14,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.security.PrivateKey;
-import javax.crypto.Cipher;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 

@@ -1,4 +1,4 @@
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.server;
 
 public class Message {
 

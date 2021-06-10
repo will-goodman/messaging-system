@@ -1,4 +1,6 @@
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.server;
+
+import com.willgoodman.messagingsystem.Report;
 
 import java.util.Map;
 import java.util.HashMap;

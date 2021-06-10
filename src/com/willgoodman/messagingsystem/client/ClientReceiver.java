@@ -1,4 +1,6 @@
-package com.willgoodman.messagingsystem;
+package com.willgoodman.messagingsystem.client;
+
+import com.willgoodman.messagingsystem.Report;
 
 import java.io.*;
 import java.net.*;
