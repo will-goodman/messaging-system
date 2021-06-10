@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.io.*;
 import java.security.PublicKey;
 import java.security.KeyFactory;

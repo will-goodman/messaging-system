@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 public class Message {
 
   private final String sender;

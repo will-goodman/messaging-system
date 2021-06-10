@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Random;

@@ -4,6 +4,7 @@
 // There is no provision for ending the server gracefully.  It will
 // end if (and only if) something exceptional happens.
 
+package com.willgoodman.messagingsystem;
 
 import java.net.*;
 import java.io.*;

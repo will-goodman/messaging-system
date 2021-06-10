@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 // Each nickname has a different incomming-message queue.
 
 import java.util.concurrent.*;

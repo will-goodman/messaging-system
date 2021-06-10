@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.net.*;
 import java.io.*;
 import java.util.concurrent.*;

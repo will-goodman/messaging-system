@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.io.*;
 
 // This is to handle logging of normal and erroneous behaviours.

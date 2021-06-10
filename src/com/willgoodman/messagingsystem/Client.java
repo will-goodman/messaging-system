@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 // Usage:
 //        java Client server-hostname
 //

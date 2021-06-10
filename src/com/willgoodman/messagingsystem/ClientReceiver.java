@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.io.*;
 import java.net.*;
 import java.security.PrivateKey;

@@ -1,3 +1,5 @@
+package com.willgoodman.messagingsystem;
+
 import java.util.ArrayList;
 import java.util.concurrent.*;
 public class MessageList {
