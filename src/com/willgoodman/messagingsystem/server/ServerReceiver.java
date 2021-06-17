@@ -3,14 +3,13 @@ package com.willgoodman.messagingsystem.server;
 import com.willgoodman.messagingsystem.*;
 
 import java.io.*;
-import java.util.concurrent.*;
+import java.util.Hashtable;
 import java.util.ArrayList;
 import java.security.PrivateKey;
 import java.util.Base64;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 
 // Gets messages from client and puts them in a queue, for another
 // thread to forward to the appropriate client.
@@ -18,12 +17,12 @@ import javax.crypto.NoSuchPaddingException;
 public class ServerReceiver extends Thread {
   private final String clientName;
   private final BufferedReader fromClient;
-  private ArrayList<User> users;
+  private Hashtable<String,User> users;
   private ArrayList<String> connectedClients;
   private Cipher DECRYPT_CIPHER;
 
-  public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey, ArrayList<User> users,
-                        ArrayList<String> connectedClients) {
+  public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey,
+                        Hashtable<String,User> users, ArrayList<String> connectedClients) {
     this.clientName = clientName;
     this.fromClient = fromClient;
     this.users = users;

@@ -5,13 +5,10 @@ import com.willgoodman.messagingsystem.Report;
 
 import java.io.*;
 import java.security.InvalidKeyException;
-import java.util.concurrent.*;
+import java.util.Hashtable;
 import java.util.ArrayList;
 import java.security.PublicKey;
-import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.spec.X509EncodedKeySpec;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -24,11 +21,11 @@ import javax.crypto.NoSuchPaddingException;
 public class ServerSender extends Thread {
   private String clientName;
   private PrintStream toClient;
-  private ArrayList<User> users;
+  private Hashtable<String,User> users;
   private ArrayList<String> connectedClients;
   private Cipher encryptCipher;
 
-  public ServerSender(String clientName, PrintStream toClient, PublicKey clientPublicKey, ArrayList<User> users,
+  public ServerSender(String clientName, PrintStream toClient, PublicKey clientPublicKey, Hashtable<String,User> users,
                       ArrayList<String> connectedClients) {
     this.clientName = clientName;
     this.toClient = toClient;

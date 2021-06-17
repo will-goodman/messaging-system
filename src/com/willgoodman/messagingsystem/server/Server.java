@@ -12,6 +12,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Hashtable;
 
 /**
  * Server for a messaging system.
@@ -37,7 +38,7 @@ public class Server {
       KeyPair keyPair = Config.generateKeys();
       KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
 
-      ArrayList<User> users = new ArrayList<>();
+      Hashtable<String, User> users = new Hashtable<>();
       int numOfClients = START_NUM_OF_CLIENTS;
       ArrayList<String> connectedClients = new ArrayList<>();
 
