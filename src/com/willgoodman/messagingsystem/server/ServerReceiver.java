@@ -20,14 +20,17 @@ public class ServerReceiver extends Thread {
   private final BufferedReader fromClient;
   private Hashtable<String,User> users;
   private Hashtable<String,Queue<Message>> clients;
+  private Hashtable<String, String> loggedInUsers;
   private Cipher DECRYPT_CIPHER;
 
   public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey,
-                        Hashtable<String,User> users, Hashtable<String,Queue<Message>> clients) {
+                        Hashtable<String,User> users, Hashtable<String,Queue<Message>> clients,
+                        Hashtable<String, String> loggedInUsers) {
     this.clientName = clientName;
     this.fromClient = fromClient;
     this.users = users;
     this.clients = clients;
+    this.loggedInUsers = loggedInUsers;
 
     try {
       this.DECRYPT_CIPHER = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -52,10 +55,32 @@ public class ServerReceiver extends Thread {
               this.users.put(username, new User(username));
               System.out.println("User " + username + " created.");
 
-              this.clients.get(this.clientName).offer(new Message(this.clientName, "User" + username + " created."));
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " created."));
             } else {
               System.out.println("User" + username + " already exists.");
               this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " already exists."));
+            }
+            break;
+          case Commands.LOGIN:
+            username = decrypt(this.fromClient.readLine());
+            if (this.users.containsKey(username)) {
+              this.loggedInUsers.put(this.clientName, username);
+              System.out.println("User " + username + " logged in.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " logged in."));
+            } else {
+              System.out.println("User " + username + " doesn't exist.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " doesn't exist."));
+            }
+            break;
+          case Commands.LOGOUT:
+            if (!this.loggedInUsers.containsKey(this.clientName)) {
+              System.out.println("No user currently logged in.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
+            } else {
+              username = this.loggedInUsers.get(this.clientName);
+              this.loggedInUsers.remove(this.clientName);
+              System.out.println("User " + username + " logged out.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " logged out."));
             }
             break;
           default:

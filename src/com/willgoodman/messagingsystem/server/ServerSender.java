@@ -24,14 +24,16 @@ public class ServerSender extends Thread {
   private PrintStream toClient;
   private Hashtable<String, User> users;
   private Hashtable<String, Queue<Message>> clients;
+  private Hashtable<String, String> loggedInUsers;
   private Cipher encryptCipher;
 
   public ServerSender(String clientName, PrintStream toClient, PublicKey clientPublicKey, Hashtable<String, User> users,
-                      Hashtable<String, Queue<Message>> clients) {
+                      Hashtable<String, Queue<Message>> clients, Hashtable<String, String> loggedInUsers) {
     this.clientName = clientName;
     this.toClient = toClient;
     this.users = users;
     this.clients = clients;
+    this.loggedInUsers = loggedInUsers;
 
     try {
       this.encryptCipher = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -49,6 +51,7 @@ public class ServerSender extends Thread {
         if (this.clients.get(this.clientName).size() > 0) {
           this.toClient.println(encrypt(this.clients.get(this.clientName).remove().toString()));
         }
+
       } catch (IllegalBlockSizeException | BadPaddingException ex) {
         Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
       }

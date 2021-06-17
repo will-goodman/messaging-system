@@ -48,12 +48,16 @@ public class ClientSender extends Thread {
                 command = terminal.readLine();
 
                 switch (command) {
-                    case Commands.REGISTER:
+                    case Commands.REGISTER: case Commands.LOGIN:
                         String username = terminal.readLine();
                         toServer.println(encrypt(command));
                         toServer.println(encrypt(username));
                         break;
+                    case Commands.LOGOUT:
+                        toServer.println(encrypt(command));
+                        break;
                     default:
+                        System.out.println("Unrecognised command: " + command);
                         break;
                 }
 

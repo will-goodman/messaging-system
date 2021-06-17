@@ -38,6 +38,7 @@ public class Server {
 
       Hashtable<String,User> users = new Hashtable<>();
       Hashtable<String,Queue<Message>> clients = new Hashtable<>();
+      Hashtable<String, String> loggedInUsers = new Hashtable<>();
       int numOfClients = START_NUM_OF_CLIENTS;
 
 
@@ -66,9 +67,9 @@ public class Server {
           clients.put(clientName, new LinkedList<>());
 
           // We create and start a new thread to read from the client:
-          (new ServerReceiver(clientName, fromClient, keyPair.getPrivate(), users, clients)).start();
+          (new ServerReceiver(clientName, fromClient, keyPair.getPrivate(), users, clients, loggedInUsers)).start();
 
-          (new ServerSender(clientName, toClient, clientPublicKey, users, clients)).start();
+          (new ServerSender(clientName, toClient, clientPublicKey, users, clients, loggedInUsers)).start();
 
         } catch (IOException ex) {
           Report.error(IO_ERROR + ex.getMessage());
