@@ -21,7 +21,6 @@ public class ServerReceiver extends Thread {
   private ArrayList<User> users;
   private ArrayList<String> connectedClients;
   private Cipher DECRYPT_CIPHER;
-  private static final String QUIT = "quit";
 
   public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey, ArrayList<User> users,
                         ArrayList<String> connectedClients) {
@@ -41,9 +40,18 @@ public class ServerReceiver extends Thread {
   public void run() {
     String command = "";
 
-    while (!command.equals(QUIT)) {
+    while (!command.equals(Commands.QUIT)) {
       try {
         command = decrypt(fromClient.readLine());
+        System.out.println("Command from " + this.clientName + ": " + command);
+
+        switch (command) {
+          case Commands.REGISTER:
+
+            break;
+          default:
+            break;
+        }
       } catch (IOException ex) {
         Report.error("Error reading from client: " + ex.getMessage());
         break;
@@ -51,7 +59,6 @@ public class ServerReceiver extends Thread {
         Report.error("Error decrypting message: " + ex.getMessage());
         break;
       }
-      System.out.println(command);
     }
 
     System.out.println(clientName + " quit.");

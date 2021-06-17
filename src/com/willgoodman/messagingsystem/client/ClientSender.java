@@ -1,5 +1,6 @@
 package com.willgoodman.messagingsystem.client;
 
+import com.willgoodman.messagingsystem.Commands;
 import com.willgoodman.messagingsystem.Config;
 import com.willgoodman.messagingsystem.Report;
 
@@ -18,8 +19,6 @@ import javax.crypto.NoSuchPaddingException;
 // Repeatedly reads text from the user and sends them to the server
 
 public class ClientSender extends Thread {
-
-  private static final String QUIT = "quit";
 
   private PrintStream toServer;
   private Cipher encryptCipher;
@@ -44,15 +43,26 @@ public class ClientSender extends Thread {
 
     try {
         String command = "";
-        while (!command.equals(QUIT)) {
+        while (!command.equals(Commands.QUIT)) {
             try {
                 command = terminal.readLine();
+
+                switch (command) {
+                    case Commands.REGISTER:
+                        String username = terminal.readLine();
+                        toServer.println(encrypt(command));
+                        toServer.println(encrypt(username));
+                        break;
+                    default:
+                        break;
+                }
+
             } catch (IOException ex) {
-                Report.errorAndGiveUp("Error reading input: " + ex.getMessage());
+                Report.errorAndGiveUp("IO Error: " + ex.getMessage());
             }
         }
 
-        toServer.println(encrypt(QUIT));
+        toServer.println(encrypt(Commands.QUIT));
     } catch (IllegalBlockSizeException | BadPaddingException ex) {
         Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
     }

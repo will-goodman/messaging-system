@@ -1,5 +1,6 @@
 package com.willgoodman.messagingsystem.client;
 
+import com.willgoodman.messagingsystem.Commands;
 import com.willgoodman.messagingsystem.Config;
 import com.willgoodman.messagingsystem.Report;
 
@@ -17,7 +18,6 @@ public class ClientReceiver extends Thread {
 
   private BufferedReader fromServer;
   private Cipher decryptCipher;
-  private static final String QUIT_MESSAGE = "quit";
 
   public ClientReceiver(BufferedReader fromServer, PrivateKey privateKey) {
     this.fromServer = fromServer;
@@ -33,7 +33,7 @@ public class ClientReceiver extends Thread {
   public void run() {
     try {
       String serverResponse = "";
-      while (!serverResponse.equals(QUIT_MESSAGE)) {
+      while (!serverResponse.equals(Commands.QUIT)) {
         serverResponse = decrypt(fromServer.readLine());
         System.out.println(serverResponse);
       }
