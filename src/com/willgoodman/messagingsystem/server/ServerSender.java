@@ -44,10 +44,16 @@ public class ServerSender extends Thread {
   }
 
   public void run() {
-    while (this.clients.contains(this.clientName)) {
-      int x = 1;
+    while (this.clients.containsKey(this.clientName)) {
+      try {
+        if (this.clients.get(this.clientName).size() > 0) {
+          this.toClient.println(encrypt(this.clients.get(this.clientName).remove().toString()));
+        }
+      } catch (IllegalBlockSizeException | BadPaddingException ex) {
+        Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
+      }
     }
-    System.out.println("ServerSender end");
+
   }
 
   private String encrypt(String plainText) throws IllegalBlockSizeException, BadPaddingException {

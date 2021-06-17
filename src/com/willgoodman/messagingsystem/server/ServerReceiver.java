@@ -42,15 +42,20 @@ public class ServerReceiver extends Thread {
 
     while (!command.equals(Commands.QUIT)) {
       try {
-        command = decrypt(fromClient.readLine());
+        command = decrypt(this.fromClient.readLine());
         System.out.println("Command from " + this.clientName + ": " + command);
 
         switch (command) {
           case Commands.REGISTER:
-            String username = decrypt(fromClient.readLine());
-            if (!users.contains(username)) {
-              users.put(username, new User(username));
+            String username = decrypt(this.fromClient.readLine());
+            if (!this.users.containsKey(username)) {
+              this.users.put(username, new User(username));
               System.out.println("User " + username + " created.");
+
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User" + username + " created."));
+            } else {
+              System.out.println("User" + username + " already exists.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " already exists."));
             }
             break;
           default:
