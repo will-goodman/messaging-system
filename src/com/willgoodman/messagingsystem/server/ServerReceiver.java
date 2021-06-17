@@ -19,13 +19,16 @@ public class ServerReceiver extends Thread {
   private final String clientName;
   private final BufferedReader fromClient;
   private ArrayList<User> users;
+  private ArrayList<String> connectedClients;
   private Cipher DECRYPT_CIPHER;
   private static final String QUIT = "quit";
 
-  public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey, ArrayList<User> users) {
+  public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey, ArrayList<User> users,
+                        ArrayList<String> connectedClients) {
     this.clientName = clientName;
     this.fromClient = fromClient;
     this.users = users;
+    this.connectedClients = connectedClients;
 
     try {
       this.DECRYPT_CIPHER = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -50,6 +53,7 @@ public class ServerReceiver extends Thread {
     }
 
     System.out.println(clientName + " quit.");
+    this.connectedClients.remove(this.clientName);
   }
 
   private String decrypt(String cipherText) throws IllegalBlockSizeException, BadPaddingException {
