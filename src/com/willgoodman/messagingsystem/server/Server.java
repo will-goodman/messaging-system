@@ -10,9 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Hashtable;
+import java.util.*;
 
 /**
  * Server for a messaging system.
@@ -38,9 +36,10 @@ public class Server {
       KeyPair keyPair = Config.generateKeys();
       KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
 
-      Hashtable<String, User> users = new Hashtable<>();
+      Hashtable<String,User> users = new Hashtable<>();
+      Hashtable<String,Queue<Message>> clients = new Hashtable<>();
       int numOfClients = START_NUM_OF_CLIENTS;
-      ArrayList<String> connectedClients = new ArrayList<>();
+
 
       ServerSocket serverSocket = new ServerSocket(Port.number);
 
@@ -64,12 +63,12 @@ public class Server {
           byte[] decodedClientKey = Base64.getDecoder().decode(fromClient.readLine());
           PublicKey clientPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedClientKey));
 
-          connectedClients.add(clientName);
+          clients.put(clientName, new LinkedList<>());
 
           // We create and start a new thread to read from the client:
-          (new ServerReceiver(clientName, fromClient, keyPair.getPrivate(), users, connectedClients)).start();
+          (new ServerReceiver(clientName, fromClient, keyPair.getPrivate(), users, clients)).start();
 
-          (new ServerSender(clientName, toClient, clientPublicKey, users, connectedClients)).start();
+          (new ServerSender(clientName, toClient, clientPublicKey, users, clients)).start();
 
         } catch (IOException ex) {
           Report.error(IO_ERROR + ex.getMessage());

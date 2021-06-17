@@ -7,6 +7,7 @@ import java.util.Hashtable;
 import java.util.ArrayList;
 import java.security.PrivateKey;
 import java.util.Base64;
+import java.util.Queue;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -18,15 +19,15 @@ public class ServerReceiver extends Thread {
   private final String clientName;
   private final BufferedReader fromClient;
   private Hashtable<String,User> users;
-  private ArrayList<String> connectedClients;
+  private Hashtable<String,Queue<Message>> clients;
   private Cipher DECRYPT_CIPHER;
 
   public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey,
-                        Hashtable<String,User> users, ArrayList<String> connectedClients) {
+                        Hashtable<String,User> users, Hashtable<String,Queue<Message>> clients) {
     this.clientName = clientName;
     this.fromClient = fromClient;
     this.users = users;
-    this.connectedClients = connectedClients;
+    this.clients = clients;
 
     try {
       this.DECRYPT_CIPHER = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -46,7 +47,11 @@ public class ServerReceiver extends Thread {
 
         switch (command) {
           case Commands.REGISTER:
-
+            String username = decrypt(fromClient.readLine());
+            if (!users.contains(username)) {
+              users.put(username, new User(username));
+              System.out.println("User " + username + " created.");
+            }
             break;
           default:
             break;
@@ -61,7 +66,7 @@ public class ServerReceiver extends Thread {
     }
 
     System.out.println(clientName + " quit.");
-    this.connectedClients.remove(this.clientName);
+    this.clients.remove(this.clientName);
   }
 
   private String decrypt(String cipherText) throws IllegalBlockSizeException, BadPaddingException {

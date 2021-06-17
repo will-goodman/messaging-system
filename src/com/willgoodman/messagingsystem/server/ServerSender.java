@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.security.PublicKey;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Queue;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -21,16 +22,16 @@ import javax.crypto.NoSuchPaddingException;
 public class ServerSender extends Thread {
   private String clientName;
   private PrintStream toClient;
-  private Hashtable<String,User> users;
-  private ArrayList<String> connectedClients;
+  private Hashtable<String, User> users;
+  private Hashtable<String, Queue<Message>> clients;
   private Cipher encryptCipher;
 
-  public ServerSender(String clientName, PrintStream toClient, PublicKey clientPublicKey, Hashtable<String,User> users,
-                      ArrayList<String> connectedClients) {
+  public ServerSender(String clientName, PrintStream toClient, PublicKey clientPublicKey, Hashtable<String, User> users,
+                      Hashtable<String, Queue<Message>> clients) {
     this.clientName = clientName;
     this.toClient = toClient;
     this.users = users;
-    this.connectedClients = connectedClients;
+    this.clients = clients;
 
     try {
       this.encryptCipher = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -43,7 +44,7 @@ public class ServerSender extends Thread {
   }
 
   public void run() {
-    while (this.connectedClients.contains(this.clientName)) {
+    while (this.clients.contains(this.clientName)) {
       int x = 1;
     }
     System.out.println("ServerSender end");
