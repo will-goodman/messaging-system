@@ -38,8 +38,6 @@ public class Server {
       KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
 
       ArrayList<User> users = new ArrayList<>();
-      MessageList messageList = new MessageList();
-      PasswordList passwordList = new PasswordList();
       int numOfClients = START_NUM_OF_CLIENTS;
       ArrayList<String> connectedClients = new ArrayList<>();
 
@@ -61,9 +59,7 @@ public class Server {
           PrintStream toClient = new PrintStream(socket.getOutputStream());
 
           // Exchange public keys
-          toClient.println("key-setup");
           toClient.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
-
           byte[] decodedClientKey = Base64.getDecoder().decode(fromClient.readLine());
           PublicKey clientPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedClientKey));
 
@@ -84,7 +80,7 @@ public class Server {
     } catch (NoSuchAlgorithmException ex) {
       Report.errorAndGiveUp(ALGORITHM_DOESNT_EXIST + Config.ENCRYPTION_ALGORITHM);
     } catch (IOException ex) {
-      Report.errorAndGiveUp(LISTEN_ERROR + Config.port);
+      Report.errorAndGiveUp(LISTEN_ERROR + Config.PORT);
     }
   }
 }
