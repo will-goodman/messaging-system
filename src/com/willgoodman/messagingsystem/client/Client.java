@@ -48,8 +48,7 @@ class Client {
             PublicKey serverPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedServerKey));
             toServer.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
 
-            // Create two client threads of a different nature:
-            (new ClientSender(toServer, hostname)).start();
+            (new ClientSender(toServer, serverPublicKey)).start();
             (new ClientReceiver(fromServer, keyPair.getPrivate())).start();
 
         } catch (NoSuchAlgorithmException ex) {
