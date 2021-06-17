@@ -6,6 +6,9 @@ import com.willgoodman.messagingsystem.Report;
 
 import java.util.concurrent.*;
 
+/**
+ * Stores the details re
+ */
 public class ClientTable {
 
   private ConcurrentMap<String,BlockingQueue<Message>> queueTable

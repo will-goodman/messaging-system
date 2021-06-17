@@ -17,11 +17,7 @@ public class ClientReceiver extends Thread {
 
   private BufferedReader fromServer;
   private Cipher decryptCipher;
-  private static final String ENCRYPTION_ALGORITHM = "RSA";
   private static final String QUIT_MESSAGE = "quit";
-  //Error messages
-  private static final String SERVER_DIED = "Server seems to have died ";
-  private static final String DECRYPT_ERROR = "Couldn't decrypt";
 
   public ClientReceiver(BufferedReader fromServer, PrivateKey privateKey) {
     this.fromServer = fromServer;
@@ -41,6 +37,7 @@ public class ClientReceiver extends Thread {
         serverResponse = decrypt(fromServer.readLine());
         System.out.println(serverResponse);
       }
+      System.out.println("end");
     } catch (IOException ex) {
       Report.errorAndGiveUp("Error reading from server: " + ex.getMessage());
     } catch (IllegalBlockSizeException | BadPaddingException ex) {

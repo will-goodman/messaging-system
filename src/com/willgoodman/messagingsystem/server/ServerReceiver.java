@@ -45,9 +45,11 @@ public class ServerReceiver extends Thread {
       try {
         command = decrypt(fromClient.readLine());
       } catch (IOException ex) {
-        Report.errorAndGiveUp("Error reading from client: " + ex.getMessage());
+        Report.error("Error reading from client: " + ex.getMessage());
+        break;
       } catch (IllegalBlockSizeException | BadPaddingException ex) {
-        Report.errorAndGiveUp("Error decrypting message: " + ex.getMessage());
+        Report.error("Error decrypting message: " + ex.getMessage());
+        break;
       }
       System.out.println(command);
     }
