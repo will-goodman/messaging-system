@@ -12,9 +12,9 @@ import java.security.NoSuchAlgorithmException;
  * */
 public class Config {
 
-    public static final int port = 4444;
-    private static final int KEY_SIZE = 2048;
-    private static final String ENCRYPTION_ALGORITHM = "RSA";
+    public static final int PORT = 4444;
+    public static final String ENCRYPTION_ALGORITHM = "RSA";
+    public static final int KEY_SIZE = 2048;
 
     /**
      * Generates a private and public key pair for either the server or a client.
