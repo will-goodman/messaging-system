@@ -83,6 +83,23 @@ public class ServerReceiver extends Thread {
               this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " logged out."));
             }
             break;
+          case Commands.SEND:
+            username = decrypt(this.fromClient.readLine());
+            String message = decrypt(this.fromClient.readLine());
+            if (!this.loggedInUsers.containsKey(this.clientName)) {
+              System.out.println("No user currently logged in.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
+            } else {
+              if (this.users.containsKey(username)) {
+                System.out.println(this.loggedInUsers.get(this.clientName) + " sent message to " + username);
+                this.clients.get(this.clientName).offer(new Message(this.clientName, "Message sent."));
+                this.users.get(username).getInbox().addMessage(new Message(this.loggedInUsers.get(this.clientName), message));
+              } else {
+                System.out.println("User " + username + " doesn't exist.");
+                this.clients.get(this.clientName).offer(new Message(this.clientName, "User " + username + " doesn't exist."));
+              }
+            }
+            break;
           default:
             break;
         }
