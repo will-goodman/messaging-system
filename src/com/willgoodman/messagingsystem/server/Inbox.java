@@ -35,6 +35,7 @@ public class Inbox {
 
     public void addMessage(Message message) {
         this.messages.add(message);
+        this.currentMessage = this.messages.size() - 1;
     }
 
     public void deleteMessage() {
