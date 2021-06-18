@@ -1,8 +1,5 @@
 package com.willgoodman.messagingsystem.server;
 
-import java.util.LinkedList;
-import java.util.Queue;
-
 /**
  * Stores all information required by the server about a user.
  * Including:
@@ -12,7 +9,7 @@ import java.util.Queue;
 public class User {
 
     private final String USERNAME;
-    private Queue<Message> inbox = new LinkedList<Message>();
+    private Inbox inbox;
 
     /**
      * Constructor.
@@ -21,6 +18,10 @@ public class User {
      */
     public User(String username) {
         this.USERNAME = username;
+    }
+
+    public Inbox getInbox() {
+        return this.inbox;
     }
 
 }
