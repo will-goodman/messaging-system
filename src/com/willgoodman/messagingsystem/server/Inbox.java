@@ -15,6 +15,18 @@ public class Inbox {
         }
     }
 
+    public void moveBackwards() {
+        if (this.currentMessage > 0) {
+            this.currentMessage -= 1;
+        }
+    }
+
+    public void moveForwards() {
+        if (this.currentMessage < this.messages.size() - 1) {
+            this.currentMessage += 1;
+        }
+    }
+
     public Message getPreviousMessage() {
         if (this.currentMessage > 0) {
             this.currentMessage -= 1;

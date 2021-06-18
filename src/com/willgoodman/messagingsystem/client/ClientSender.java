@@ -53,7 +53,7 @@ public class ClientSender extends Thread {
                         toServer.println(encrypt(command));
                         toServer.println(encrypt(username));
                         break;
-                    case Commands.LOGOUT:
+                    case Commands.LOGOUT: case Commands.PREVIOUS:
                         toServer.println(encrypt(command));
                         break;
                     case Commands.SEND:
