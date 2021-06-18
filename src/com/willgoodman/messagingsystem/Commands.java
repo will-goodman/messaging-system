@@ -8,5 +8,6 @@ public class Commands {
     public static final String LOGOUT = "logout";
     public static final String SEND = "send";
     public static final String PREVIOUS = "previous";
+    public static final String NEXT = "next";
 
 }
