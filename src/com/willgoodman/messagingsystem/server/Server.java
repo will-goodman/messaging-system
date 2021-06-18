@@ -42,7 +42,7 @@ public class Server {
       int numOfClients = START_NUM_OF_CLIENTS;
 
 
-      ServerSocket serverSocket = new ServerSocket(Port.number);
+      ServerSocket serverSocket = new ServerSocket(Config.PORT);
 
       // We loop for ever, as servers usually do.
       while (true) {
