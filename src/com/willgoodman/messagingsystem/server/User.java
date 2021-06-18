@@ -9,7 +9,7 @@ package com.willgoodman.messagingsystem.server;
 public class User {
 
     private final String USERNAME;
-    private Inbox inbox;
+    private Inbox inbox = new Inbox();
 
     /**
      * Constructor.

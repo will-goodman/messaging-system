@@ -46,12 +46,20 @@ public class ServerSender extends Thread {
   }
 
   public void run() {
+    Message lastSentMessage = null;
     while (this.clients.containsKey(this.clientName)) {
       try {
         if (this.clients.get(this.clientName).size() > 0) {
           this.toClient.println(encrypt(this.clients.get(this.clientName).remove().toString()));
         }
 
+        if (this.loggedInUsers.containsKey(this.clientName)) {
+          Message userCurrentMessage = this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().getCurrentMessage();
+          if (userCurrentMessage != lastSentMessage) {
+            this.toClient.println(encrypt(userCurrentMessage.toString()));
+            lastSentMessage = userCurrentMessage;
+          }
+        }
       } catch (IllegalBlockSizeException | BadPaddingException ex) {
         Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
       }
