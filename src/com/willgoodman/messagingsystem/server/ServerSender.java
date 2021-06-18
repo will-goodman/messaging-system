@@ -6,7 +6,6 @@ import com.willgoodman.messagingsystem.Report;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.util.Hashtable;
-import java.util.ArrayList;
 import java.security.PublicKey;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -59,6 +58,8 @@ public class ServerSender extends Thread {
             this.toClient.println(encrypt(userCurrentMessage.toString()));
             lastSentMessage = userCurrentMessage;
           }
+        } else {
+          lastSentMessage = null;
         }
       } catch (IllegalBlockSizeException | BadPaddingException ex) {
         Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
