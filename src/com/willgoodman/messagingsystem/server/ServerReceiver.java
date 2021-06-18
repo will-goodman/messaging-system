@@ -116,6 +116,14 @@ public class ServerReceiver extends Thread {
               this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().moveForwards();
             }
             break;
+          case Commands.DELETE:
+            if (!this.loggedInUsers.containsKey(this.clientName)) {
+              System.out.println("No user currently logged in.");
+              this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
+            } else {
+              this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().deleteMessage();
+            }
+            break;
           default:
             break;
         }

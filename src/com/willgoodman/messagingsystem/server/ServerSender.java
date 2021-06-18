@@ -54,7 +54,7 @@ public class ServerSender extends Thread {
 
         if (this.loggedInUsers.containsKey(this.clientName)) {
           Message userCurrentMessage = this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().getCurrentMessage();
-          if (userCurrentMessage != lastSentMessage) {
+          if (userCurrentMessage != null && userCurrentMessage != lastSentMessage) {
             this.toClient.println(encrypt(userCurrentMessage.toString()));
             lastSentMessage = userCurrentMessage;
           }
