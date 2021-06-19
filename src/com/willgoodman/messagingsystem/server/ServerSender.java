@@ -19,6 +19,7 @@ import javax.crypto.NoSuchPaddingException;
  * Sends all relevant messages to the connected client (or a user logged in to the client)
  */
 public class ServerSender extends Thread {
+
     private String clientName;
     private PrintStream toClient;
     private Hashtable<String, User> users;

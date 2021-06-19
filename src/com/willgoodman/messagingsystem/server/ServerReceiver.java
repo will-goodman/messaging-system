@@ -137,6 +137,12 @@ public class ServerReceiver extends Thread {
     }
 
     System.out.println(clientName + " quit.");
+    this.clients.get(this.clientName).offer(new Message("Server", Commands.QUIT));
+    try {
+      Thread.sleep(100);
+    } catch (InterruptedException ex) {
+      System.out.println(ex.getMessage());
+    }
     this.clients.remove(this.clientName);
   }
 

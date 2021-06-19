@@ -1,12 +1,12 @@
 package com.willgoodman.messagingsystem.client;
 
-import com.willgoodman.messagingsystem.Commands;
 import com.willgoodman.messagingsystem.Config;
 import com.willgoodman.messagingsystem.Report;
 
 import java.io.*;
 import java.security.PrivateKey;
 import java.util.Base64;
+import java.util.regex.Pattern;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -16,6 +16,7 @@ import javax.crypto.IllegalBlockSizeException;
  */
 public class ClientReceiver extends Thread {
 
+  private static final Pattern SERVER_QUIT_PATTERN = Pattern.compile("^From Server at \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}: quit$");
   private BufferedReader fromServer;
   private Cipher decryptCipher;
 
@@ -33,7 +34,7 @@ public class ClientReceiver extends Thread {
   public void run() {
     try {
       String serverResponse = "";
-      while (!serverResponse.equals(Commands.QUIT)) {
+      while (!SERVER_QUIT_PATTERN.matcher(serverResponse).find()) {
         serverResponse = decrypt(fromServer.readLine());
         System.out.println(serverResponse);
       }
