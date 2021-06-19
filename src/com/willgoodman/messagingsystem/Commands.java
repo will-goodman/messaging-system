@@ -1,5 +1,8 @@
 package com.willgoodman.messagingsystem;
 
+/**
+ * Contains the Strings representing all available commands users can use to interact with the server
+ */
 public class Commands {
 
     public static final String QUIT = "quit";

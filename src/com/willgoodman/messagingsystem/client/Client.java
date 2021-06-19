@@ -1,10 +1,5 @@
 package com.willgoodman.messagingsystem.client;
 
-// Usage:
-//        java Client server-hostname
-//
-
-
 import com.willgoodman.messagingsystem.Config;
 import com.willgoodman.messagingsystem.Report;
 
@@ -15,6 +10,11 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
+/**
+ * Starts a fresh Client which connects to the server with the provided hostname
+ *
+ * Usage: java Client server-hostname
+ */
 class Client {
 
     private static final String USAGE = "Usage: java Client server-hostname";

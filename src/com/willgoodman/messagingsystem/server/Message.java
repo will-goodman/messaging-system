@@ -3,13 +3,16 @@ package com.willgoodman.messagingsystem.server;
 import java.sql.Timestamp;
 import java.util.Date;
 
+/**
+ * Message sent from one user to another
+ */
 public class Message {
 
   private final Timestamp TIMESTAMP;
   private final String AUTHOR;
   private final String TEXT;
 
-  Message(String sender, String text) {
+  public Message(String sender, String text) {
     this.TIMESTAMP = new Timestamp(new Date().getTime());
     this.AUTHOR = sender;
     this.TEXT = text;

@@ -20,6 +20,11 @@ public class User {
         this.USERNAME = username;
     }
 
+    /**
+     * Gets the user's inbox
+     *
+     * @return the user's inbox
+     */
     public Inbox getInbox() {
         return this.inbox;
     }

@@ -4,7 +4,6 @@ import com.willgoodman.messagingsystem.*;
 
 import java.io.*;
 import java.util.Hashtable;
-import java.util.ArrayList;
 import java.security.PrivateKey;
 import java.util.Base64;
 import java.util.Queue;
@@ -12,9 +11,10 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
-// Gets messages from client and puts them in a queue, for another
-// thread to forward to the appropriate client.
 
+/**
+ * Receives commands from the client (ClientSender) and performs the appropriate actions
+ */
 public class ServerReceiver extends Thread {
   private final String clientName;
   private final BufferedReader fromClient;
@@ -140,6 +140,14 @@ public class ServerReceiver extends Thread {
     this.clients.remove(this.clientName);
   }
 
+  /**
+   * Decrypts a message (String) received from a client.
+   *
+   * @param cipherText the original Base64 encoded cipher text
+   * @return the decrypted String message
+   * @throws IllegalBlockSizeException if the decryption fails
+   * @throws BadPaddingException if the decryption fails
+   */
   private String decrypt(String cipherText) throws IllegalBlockSizeException, BadPaddingException {
     return new String (DECRYPT_CIPHER.doFinal(Base64.getDecoder().decode(cipherText)));
   }
