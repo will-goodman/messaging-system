@@ -22,7 +22,7 @@ import javax.crypto.NoSuchPaddingException;
  */
 public class ClientSender extends Thread {
 
-    private static final Logger LOGGER = LogManager.getLogger(ClientReceiver.class);
+    private static final Logger LOGGER = LogManager.getLogger(ClientSender.class);
     private PrintStream toServer;
     private Cipher encryptCipher;
     private AtomicBoolean disconnect;
