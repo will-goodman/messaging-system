@@ -24,6 +24,7 @@ class Client {
     private static final Logger LOGGER = LogManager.getLogger(Client.class);
 
     public static void main(String[] args) {
+        LOGGER.info("Running Client.main()");
         try {
             String hostname = args[0];
             LOGGER.info(String.format("Hostname: %s", hostname));
