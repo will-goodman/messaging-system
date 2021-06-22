@@ -9,6 +9,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Starts a fresh Client which connects to the server with the provided hostname
@@ -48,8 +49,11 @@ class Client {
             PublicKey serverPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedServerKey));
             toServer.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
 
-            (new ClientSender(toServer, serverPublicKey)).start();
-            (new ClientReceiver(fromServer, keyPair.getPrivate())).start();
+            // when the user enters the quit command this triggers the ClientReceiver to close
+            AtomicBoolean disconnect = new AtomicBoolean();
+
+            (new ClientSender(toServer, serverPublicKey, disconnect)).start();
+            (new ClientReceiver(fromServer, keyPair.getPrivate(), disconnect)).start();
 
         } catch (NoSuchAlgorithmException ex) {
             Report.errorAndGiveUp(ALGORITHM_DOESNT_EXIST);

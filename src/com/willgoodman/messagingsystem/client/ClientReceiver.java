@@ -6,7 +6,7 @@ import com.willgoodman.messagingsystem.Report;
 import java.io.*;
 import java.security.PrivateKey;
 import java.util.Base64;
-import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -16,12 +16,13 @@ import javax.crypto.IllegalBlockSizeException;
  */
 public class ClientReceiver extends Thread {
 
-  private static final Pattern SERVER_QUIT_PATTERN = Pattern.compile("^From Server at \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}: quit$");
   private BufferedReader fromServer;
   private Cipher decryptCipher;
+  private AtomicBoolean disconnect;
 
-  public ClientReceiver(BufferedReader fromServer, PrivateKey privateKey) {
+  public ClientReceiver(BufferedReader fromServer, PrivateKey privateKey, AtomicBoolean disconnect) {
     this.fromServer = fromServer;
+    this.disconnect = disconnect;
 
     try {
       this.decryptCipher = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -33,16 +34,24 @@ public class ClientReceiver extends Thread {
 
   public void run() {
     try {
-      String serverResponse = "";
-      while (!SERVER_QUIT_PATTERN.matcher(serverResponse).find()) {
-        serverResponse = decrypt(fromServer.readLine());
-        System.out.println(serverResponse);
+      while (!this.disconnect.get()) {
+        // .ready() check ensures the value of disconnect is checked regularly, rather than waiting forever for a
+        // response from the server
+        if (this.fromServer.ready()) {
+          System.out.println(decrypt(fromServer.readLine()));
+        }
       }
-      System.out.println("Connection closed.");
     } catch (IOException ex) {
       Report.errorAndGiveUp("Error reading from server: " + ex.getMessage());
     } catch (IllegalBlockSizeException | BadPaddingException ex) {
       Report.errorAndGiveUp("Error decrypting response from server: " + ex.getMessage());
+    }
+
+    try {
+      this.fromServer.close();
+      System.out.println("Connection closed.");
+    } catch (IOException ex) {
+      System.out.println("Error closing connection: " + ex.getMessage());
     }
   }
 

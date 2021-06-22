@@ -9,6 +9,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -25,9 +26,11 @@ public class ClientSender extends Thread {
 
     private PrintStream toServer;
     private Cipher encryptCipher;
+    private AtomicBoolean disconnect;
 
-    public ClientSender(PrintStream toServer, PublicKey serverPublicKey) {
+    public ClientSender(PrintStream toServer, PublicKey serverPublicKey, AtomicBoolean disconnect) {
         this.toServer = toServer;
+        this.disconnect = disconnect;
 
         try {
             this.encryptCipher = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
@@ -82,7 +85,11 @@ public class ClientSender extends Thread {
                 }
             }
 
-            toServer.println(encrypt(Commands.QUIT));
+            this.toServer.println(encrypt(Commands.QUIT));
+            this.toServer.flush();  // ensure all messages are sent before closing connection
+            this.toServer.close();
+            this.disconnect.set(true);
+
         } catch (IllegalBlockSizeException | BadPaddingException ex) {
             Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
         }

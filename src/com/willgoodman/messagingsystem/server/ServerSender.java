@@ -69,6 +69,7 @@ public class ServerSender extends Thread {
             }
         }
 
+        this.toClient.flush();  // ensure all messages are sent before closing connection
         this.toClient.close();
     }
 
