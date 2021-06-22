@@ -64,9 +64,12 @@ public class ServerSender extends Thread {
                 }
             } catch (IllegalBlockSizeException | BadPaddingException ex) {
                 Report.errorAndGiveUp("Error encrypting message: " + ex.getMessage());
+            } catch (NullPointerException ex) {
+                System.out.println("Client quit mid-execution");
             }
         }
 
+        this.toClient.close();
     }
 
     /**

@@ -137,13 +137,14 @@ public class ServerReceiver extends Thread {
     }
 
     System.out.println(clientName + " quit.");
-    this.clients.get(this.clientName).offer(new Message("Server", Commands.QUIT));
-    try {
-      Thread.sleep(100);
-    } catch (InterruptedException ex) {
-      System.out.println(ex.getMessage());
-    }
+
+    Thread.yield();  // a message may currently being sent to the client
     this.clients.remove(this.clientName);
+    try {
+      this.fromClient.close();
+    } catch (IOException ex) {
+      System.out.println("Error closing connection with client: " + ex.getMessage());
+    }
   }
 
   /**
