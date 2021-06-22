@@ -1,7 +1,6 @@
 package com.willgoodman.messagingsystem.client;
 
 import com.willgoodman.messagingsystem.Config;
-import com.willgoodman.messagingsystem.Report;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
