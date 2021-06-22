@@ -12,6 +12,12 @@ public class Message {
   private final String AUTHOR;
   private final String TEXT;
 
+  /**
+   * Constructor
+   *
+   * @param sender name of the user who sent the message
+   * @param text content of the message
+   */
   public Message(String sender, String text) {
     this.TIMESTAMP = new Timestamp(new Date().getTime());
     this.AUTHOR = sender;
