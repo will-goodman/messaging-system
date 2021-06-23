@@ -27,7 +27,7 @@ public class Server {
   private static final String STANDARD_CLIENT_NAME = "Client_";
 
   public static void main(String [] args) {
-
+    LOGGER.info("Running Server.main()");
     try {
       KeyPair keyPair = Config.generateKeys();
       KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
