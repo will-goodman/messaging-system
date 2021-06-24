@@ -1,5 +1,8 @@
 package com.willgoodman.messagingsystem.server;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * Stores all information required by the server about a user.
  * Including:
@@ -8,6 +11,7 @@ package com.willgoodman.messagingsystem.server;
  */
 public class User {
 
+    private static final Logger LOGGER = LogManager.getLogger(User.class);
     private final String USERNAME;
     private Inbox inbox = new Inbox();
 
@@ -17,6 +21,7 @@ public class User {
      * @param username Unique username for the user. Cannot be changed
      */
     public User(String username) {
+        LOGGER.info("Constructing User");
         this.USERNAME = username;
     }
 
@@ -26,6 +31,7 @@ public class User {
      * @return the user's inbox
      */
     public Inbox getInbox() {
+        LOGGER.info("Running User.getInbox()");
         return this.inbox;
     }
 
