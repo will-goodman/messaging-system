@@ -1,84 +1,97 @@
-package com.willgoodman.messagingsystem.server;
+package net.willgoodman.messagingsystem.server;// Usage:
+//        java Server
+//
+// There is no provision for ending the server gracefully.  It will
+// end if (and only if) something exceptional happens.
 
-import com.willgoodman.messagingsystem.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import net.willgoodman.messagingsystem.Port;
+import net.willgoodman.messagingsystem.Report;
 
 import java.net.*;
 import java.io.*;
-import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
+import java.security.KeyPairGenerator;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.*;
+import java.security.PrivateKey;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
-/**
- * Server for a messaging system.
- * There is no provision for ending the server gracefully.  It will end if (and only if) something exceptional happens.
- *
- * Usage: java Server
- * */
 public class Server {
 
-  private static final Logger LOGGER = LogManager.getLogger(Server.class);
-  private static final int START_NUM_OF_CLIENTS = 0;
-  private static final String STANDARD_CLIENT_NAME = "Client_";
+  private static final String FILENAME = "./src/main/resources/net/willgoodman/messagingsystem/publicKeys.txt";
+  private static final int keySize = 2048;
 
   public static void main(String [] args) {
-    LOGGER.info("Running Server.main()");
+
+    PrivateKey privateKey = null;
+    PublicKey publicKey = null;	
+    
     try {
-      KeyPair keyPair = Config.generateKeys();
-      KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
-      LOGGER.info("Generated KeyPair");
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+      keyPairGenerator.initialize(keySize);
+      KeyPair keyPair = keyPairGenerator.genKeyPair();
+      publicKey = keyPair.getPublic();
+      privateKey = keyPair.getPrivate();
+    } catch (NoSuchAlgorithmException e) {
+      Report.errorAndGiveUp("Encryption algorithm doesn't exist");
+    }
 
-      Hashtable<String,User> users = new Hashtable<>();
-      Hashtable<String,Queue<Message>> clients = new Hashtable<>();
-      Hashtable<String, String> loggedInUsers = new Hashtable<>();
-      int numOfClients = START_NUM_OF_CLIENTS;
+    try {
+      BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(FILENAME));
+      String encodedKey = Base64.getEncoder().encodeToString(publicKey.getEncoded());
+      bufferedWriter.write("localhost-" + encodedKey + "\n");
+      bufferedWriter.close();
+    } catch (IOException e) {
+      Report.errorAndGiveUp("Couldn't write to public key file");
+    }
 
-      ServerSocket serverSocket = new ServerSocket(Config.PORT);
-      LOGGER.info(String.format("Started listening on port %d", Config.PORT));
-
+    // This table will be shared by the server threads:
+    ClientTable clientTable = new ClientTable();
+    MessageList messageList = new MessageList();
+    int numOfClients = 0;
+    
+    ServerSocket serverSocket = null;
+    
+    try {
+      serverSocket = new ServerSocket(Port.number);
+    } 
+    catch (IOException e) {
+      Report.errorAndGiveUp("Couldn't listen on port " + Port.number);
+    }
+    
+    try { 
       // We loop for ever, as servers usually do.
       while (true) {
-        try {
-          // Listen to the socket, accepting connections from new clients:
-          Socket socket = serverSocket.accept();
+        // Listen to the socket, accepting connections from new clients:
+        Socket socket = serverSocket.accept(); // Matches AAAAA in Client
+	
+        // This is so that we can use readLine():
+        BufferedReader fromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-          String clientName = STANDARD_CLIENT_NAME + (++numOfClients);
-          LOGGER.debug(String.format("%s connected", clientName));
+        // We ask the client what its name is:
+        //String clientName = fromClient.readLine(); // Matches BBBBB in Client
 
-          BufferedReader fromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-          PrintStream toClient = new PrintStream(socket.getOutputStream());
-          LOGGER.debug("Connected to client");
+        String clientName = "Unknown client " + (++numOfClients);
+        Report.behaviour(clientName + " connected");
+        
+        // We add the client to the table:
+        clientTable.add(clientName);
+        
+        // We create and start a new thread to read from the client:
+        (new ServerReceiver(clientName, fromClient, clientTable, messageList, privateKey)).start();
 
-          // Exchange public keys
-          toClient.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
-          byte[] decodedClientKey = Base64.getDecoder().decode(fromClient.readLine());
-          PublicKey clientPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedClientKey));
-          LOGGER.debug("Exchanged keys");
-
-          clients.put(clientName, new LinkedList<>());
-
-          (new ServerReceiver(clientName, fromClient, keyPair.getPrivate(), users, clients, loggedInUsers)).start();
-          (new ServerSender(clientName, toClient, clientPublicKey, users, clients, loggedInUsers)).start();
-          LOGGER.debug("Started ServerSender and ServerReceiver threads");
-
-        } catch (IOException ex) {
-          LOGGER.error(String.format("Error connecting to client (%s)", ex.getMessage()));
-        } catch (InvalidKeySpecException ex) {
-          LOGGER.error(String.format("Error decoding client public key: %s", ex.getMessage()));
-        }
+        // We create and start a new thread to write to the client:
+        PrintStream toClient = new PrintStream(socket.getOutputStream());
+        toClient.println(clientName);
+        (new ServerSender(clientTable.getQueue(clientName), toClient, messageList, clientName)).start();
       }
-
-    } catch (NoSuchAlgorithmException ex) {
-      LOGGER.fatal(String.format("Encryption algorithm %s is not available", Config.ENCRYPTION_ALGORITHM));
-    } catch (IOException ex) {
-      LOGGER.fatal(String.format("Couldn't listen on port %d", Config.PORT));
-    } finally {
-      System.exit(1);
+    } 
+    catch (IOException e) {
+      // Lazy approach:
+      Report.error("IO error " + e.getMessage());
+      // A more sophisticated approach could try to establish a new
+      // connection. But this is beyond the scope of this simple exercise.
     }
   }
 }

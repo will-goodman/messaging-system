@@ -1,69 +1,121 @@
-package com.willgoodman.messagingsystem.client;
+package net.willgoodman.messagingsystem.client;// Usage:
+//        java Client user-nickname server-hostname
+//
+// After initializing and opening appropriate sockets, we start two
+// client threads, one to send messages, and another one to get
+// messages.
+//
+// A limitation of our implementation is that there is no provision
+// for a client to end after we start it. However, we implemented
+// things so that pressing ctrl-c will cause the client to end
+// gracefully without causing the server to fail.
+//
+// Another limitation is that there is no provision to terminate when
+// the server dies.
 
-import com.willgoodman.messagingsystem.Config;
+
+import net.willgoodman.messagingsystem.Port;
+import net.willgoodman.messagingsystem.Report;
 
 import java.io.*;
 import java.net.*;
-import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PublicKey;
+import java.security.PrivateKey;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-/**
- * Starts a fresh Client which connects to the server with the provided hostname
- *
- * Usage: java Client server-hostname
- */
 class Client {
+  
+  private static final int KEY_SIZE = 2048;
+  private static final String FILENAME = "./src/main/resources/net/willgoodman/messagingsystem/publicKeys.txt";
+  
+  public static void main(String[] args) {
 
-    private static final Logger LOGGER = LogManager.getLogger(Client.class);
-
-    public static void main(String[] args) {
-        LOGGER.info("Running Client.main()");
-        try {
-            String hostname = args[0];
-            LOGGER.info(String.format("Hostname: %s", hostname));
-
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(Config.ENCRYPTION_ALGORITHM);
-            keyPairGenerator.initialize(Config.KEY_SIZE);
-            KeyPair keyPair = keyPairGenerator.genKeyPair();
-            LOGGER.debug("Generated KeyPair");
-
-            Socket server = new Socket(hostname, Config.PORT);
-            PrintStream toServer = new PrintStream(server.getOutputStream());
-            BufferedReader fromServer = new BufferedReader(new InputStreamReader(server.getInputStream()));
-            LOGGER.debug("Connected to server");
-
-            // Exchange public keys
-            byte[] decodedServerKey = Base64.getDecoder().decode(fromServer.readLine());
-            KeyFactory keyFactory = KeyFactory.getInstance(Config.ENCRYPTION_ALGORITHM);
-            PublicKey serverPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedServerKey));
-            toServer.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
-            LOGGER.debug("Exchanged keys");
-
-            // when the user enters the quit command this triggers the ClientReceiver to close
-            AtomicBoolean disconnect = new AtomicBoolean();
-
-            (new ClientSender(toServer, serverPublicKey, disconnect)).start();
-            (new ClientReceiver(fromServer, keyPair.getPrivate(), disconnect)).start();
-            LOGGER.debug("Started ClientSender and ClientReceiver threads");
-
-        } catch (NullPointerException ex) {
-            LOGGER.fatal("Usage: java Client server-hostname");
-        } catch (NoSuchAlgorithmException ex) {
-            LOGGER.fatal(String.format("Encryption algorithm %s is not available", Config.ENCRYPTION_ALGORITHM));
-        } catch (UnknownHostException ex) {
-            LOGGER.fatal("Host could not be found");
-        } catch (IOException ex) {
-            LOGGER.fatal(String.format("The server may not be running: %s", ex.getMessage()));
-        } catch (InvalidKeySpecException ex) {
-            LOGGER.fatal(String.format("Error decoding server public key: %s", ex.getMessage()));
-        } finally {
-            System.exit(1);
-        }
+    // Check correct usage:
+    if (args.length != 1) {
+      Report.errorAndGiveUp("Usage: java Client server-hostname");
     }
+
+    // Initialize information:
+    //String nickname = args[0];
+    String hostname = args[0];
+
+    //if (!nickname.equals("quit")) {
+    
+        //String hostname = "localhost";
+        // Open sockets:
+        PrintStream toServer = null;
+        BufferedReader fromServer = null;
+        Socket server = null;
+
+
+        String threadName = "";
+        try {
+            server = new Socket(hostname, Port.number); // Matches AAAAA in Server.java
+            toServer = new PrintStream(server.getOutputStream());
+            fromServer = new BufferedReader(new InputStreamReader(server.getInputStream()));
+            threadName = fromServer.readLine();
+        } 
+        catch (UnknownHostException e) {
+            Report.errorAndGiveUp("Unknown host: " + hostname);
+        } 
+        catch (IOException e) {
+            Report.errorAndGiveUp("The server doesn't seem to be running " + e.getMessage());
+        }
+  
+        PublicKey publicKey = null;
+        PrivateKey privateKey = null;
+      
+        try {
+          KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+          keyPairGenerator.initialize(KEY_SIZE);
+          KeyPair keyPair = keyPairGenerator.genKeyPair();
+          publicKey = keyPair.getPublic();
+          privateKey = keyPair.getPrivate(); 
+        } catch (NoSuchAlgorithmException e) {
+          Report.errorAndGiveUp("Encryption algorithm doesn't exist");
+        }
+
+        try {
+          BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(FILENAME, true));
+          String encodedKey = Base64.getEncoder().encodeToString(publicKey.getEncoded());
+          bufferedWriter.write(threadName + "-" + encodedKey + "\n");
+          bufferedWriter.close();
+        } catch (IOException e) {
+          Report.errorAndGiveUp("Couldn't write to public key file");
+        }
+
+      
+        // Tell the server what my nickname is:
+        //toServer.println(nickname); // Matches BBBBB in Server.java
+     
+        // Create two client threads of a diferent nature:
+        ClientSender sender = new ClientSender(toServer);
+        ClientReceiver receiver = new ClientReceiver(fromServer, privateKey);
+
+        // Run them in parallel:
+        sender.start();
+        receiver.start();
+    
+        // Wait for them to end and close sockets.
+        try {
+            sender.join();
+            toServer.close();
+            receiver.join();
+            fromServer.close();
+            server.close();
+        }
+        catch (IOException e) {
+            Report.errorAndGiveUp("Something wrong " + e.getMessage());
+        }
+        catch (InterruptedException e) {
+            Report.errorAndGiveUp("Unexpected interruption " + e.getMessage());
+        }
+
+    /*} else {
+        net.willgoodman.messagingsystem.Report.errorAndGiveUp("User nickname cannot be 'quit'");
+    }*/
+  }
 }

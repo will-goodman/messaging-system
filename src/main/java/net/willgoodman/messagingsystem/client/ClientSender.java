@@ -1,128 +1,157 @@
-package com.willgoodman.messagingsystem.client;
+package net.willgoodman.messagingsystem.client;
 
-import com.willgoodman.messagingsystem.Commands;
-import com.willgoodman.messagingsystem.Config;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.willgoodman.messagingsystem.Report;
 
 import java.io.*;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 
-/**
- * Reads text entered by the user and forwards the commands on to the Server (ServerReceiver class).
- */
+
+// Repeatedly reads recipient's nickname and text from the user in two
+// separate lines, sending them to the server (read by ServerReceiver
+// thread).
+
 public class ClientSender extends Thread {
 
-    private static final Logger LOGGER = LogManager.getLogger(ClientSender.class);
-    private PrintStream toServer;
-    private Cipher encryptCipher;
-    private AtomicBoolean disconnect;
+  private String nickname;
+  private PrintStream server;
+  private static final String FILENAME = "./src/main/resources/net/willgoodman/messagingsystem/publicKeys.txt";
+  private PublicKey serverPublicKey = null;
+  private static final String QUIT_MESSAGE = "quit";
+  private static final String REGISTER = "register";
+  private static final String LOGIN = "login";
+  private static final String LOGOUT = "logout";
+  private static final String PREVIOUS = "previous";
+  private static final String NEXT = "next";
+  private static final String DELETE = "delete";
+  private static final String SEND = "send";
+  private static final String NOT_RECOGNISED = "Command not recognised";
+  private static final String DISCONNECTED = "Disconnected";
+  private static final String THREAD_CANT_SLEEP = "Thread could not sleep";
+  private static final String CONNECTION_BROKE = "Communication broke in ClientSender";
 
-    /**
-     * Constructor
-     *
-     * @param toServer sends messages to the server
-     * @param serverPublicKey key used to encrypt messages to the server
-     * @param disconnect boolean storing whether the client should disconnect from the server
-     */
-    public ClientSender(PrintStream toServer, PublicKey serverPublicKey, AtomicBoolean disconnect) {
-        LOGGER.info("Constructing ClientSender");
-        this.toServer = toServer;
-        this.disconnect = disconnect;
+  ClientSender(PrintStream server) {
+    //this.nickname = nickname;
+    this.server = server;
+  }
 
+  public void run() {
+
+    try {
+      BufferedReader reader = new BufferedReader(new FileReader(FILENAME));
+      String currentLine = "";
+      while (!currentLine.contains("localhost")) {
+        currentLine = reader.readLine();
+      }
+      String encodedKey = currentLine.split("-")[1];
+      byte[] decodedKey = Base64.getDecoder().decode(encodedKey);
+
+      try {
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         try {
-            this.encryptCipher = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
-            this.encryptCipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
-            LOGGER.debug("Created encryption cipher");
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
-            LOGGER.fatal(String.format("Error initialising encryption cipher (%s)", ex.getMessage()));
-        } catch (InvalidKeyException ex) {
-            LOGGER.fatal("Invalid server public key");
-        } finally {
-            System.exit(1);
+        serverPublicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodedKey));
+        } catch (InvalidKeySpecException e) {
+          Report.errorAndGiveUp("Invalid key spec");
         }
-    }
+      } catch (NoSuchAlgorithmException e) {
+        Report.errorAndGiveUp("Encryption algorithm doesn't exist");
+      }     
+      
+    } catch (IOException ex) {
+      Report.errorAndGiveUp("Error reading the file");
+    }    
+    
+    // So that we can use the method readLine:
+    BufferedReader user = new BufferedReader(new InputStreamReader(System.in));
 
-    /**
-     * Starts a new thread which sends any commands entered by the user to the server
-     */
-    public void run() {
-        LOGGER.info("Running ClientSender.run()");
-
-        // So that we can use the method readLine:
-        BufferedReader terminal = new BufferedReader(new InputStreamReader(System.in));
-        LOGGER.info("Created BufferedReader from System.in");
-
+    try {
+      // Then loop forever sending messages to recipients via the server:
+      while (true) {
+        String commandPlainText = user.readLine();
+        String command = "";
         try {
-            String command = "";
-            while (!command.equals(Commands.QUIT)) {
-                command = terminal.readLine();
-                LOGGER.info(String.format("Command: %s", command));
-
-                switch (command) {
-                    case Commands.REGISTER:
-                    case Commands.LOGIN:
-                        String username = terminal.readLine();
-                        toServer.println(encrypt(command));
-                        toServer.println(encrypt(username));
-                        break;
-                    case Commands.LOGOUT:
-                    case Commands.PREVIOUS:
-                    case Commands.NEXT:
-                    case Commands.DELETE:
-                        toServer.println(encrypt(command));
-                        break;
-                    case Commands.SEND:
-                        username = terminal.readLine();
-                        String message = terminal.readLine();
-                        toServer.println(encrypt(command));
-                        toServer.println(encrypt(username));
-                        toServer.println(encrypt(message));
-                        break;
-                    case Commands.QUIT:
-                        break;
-                    default:
-                        LOGGER.debug(String.format("Unrecognised command: %s", command));
-                        break;
-                }
+          command = encrypt(commandPlainText);
+          //System.out.println(new String (command));
+        } catch (Exception e) {
+          Report.errorAndGiveUp("Couldn't encrypt");
+        } 
+        
+        
+        if (commandPlainText.equals(QUIT_MESSAGE)) {
+            server.println(command);
+            //server.println("-1");
+            //ClientReceiver must close before ClientSender, otherwise we would get an I/O Exception
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Report.error(THREAD_CANT_SLEEP);
             }
+            break;
+          
+        } else {
+            if (commandPlainText.equals(REGISTER) || commandPlainText.equals(LOGIN)) {
+                String username = null;
+                String password = null;                
+                try {
+                  username = encrypt(user.readLine());
+                  password = encrypt(user.readLine());
+                } catch (Exception e) {
 
-            LOGGER.info("Disconnecting");
-
-            this.toServer.println(encrypt(Commands.QUIT));
-            this.toServer.flush();  // ensure all messages are sent before closing connection
-            this.toServer.close();
-            this.disconnect.set(true);
-            LOGGER.debug("Disconnected");
-        } catch (IllegalBlockSizeException | BadPaddingException ex) {
-            LOGGER.fatal(String.format("Error encrypting message (%s)", ex.getMessage()));
-        } catch (IOException ex) {
-            LOGGER.fatal(String.format("Error sending to server (%s)", ex.getMessage()));
-        } finally {
-            System.exit(1);
+                }
+                server.println(command);
+                server.println(username);
+                server.println(password);
+            } else if (commandPlainText.equals(LOGOUT) || commandPlainText.equals(PREVIOUS) || commandPlainText.equals(NEXT) || commandPlainText.equals(DELETE)) {
+                server.println(command);
+            } else if (commandPlainText.equals(SEND)) {
+                String username = null;
+                String message = null;                
+                try {
+                  username = encrypt(user.readLine());
+                  message = encrypt(user.readLine());
+                } catch (Exception e) {
+          
+                }
+                server.println(command);
+                server.println(username);
+                server.println(message);
+            } else {
+                Report.error(NOT_RECOGNISED);
+            }
+            //server.println(recipient); // Matches CCCCC in ServerReceiver
+            //server.println(text);      // Matches DDDDD in ServerReceiver
         }
+      }
+      //This will only execute if there were no errors along the way, otherwise the I/O Exception is triggered
+      System.out.println(DISCONNECTED);
     }
+    catch (IOException e) {
+      Report.errorAndGiveUp(CONNECTION_BROKE 
+                        + e.getMessage());
+    }
+  }
 
-    /**
-     * Encrypts a message (String) ready to be sent to the Server.
-     *
-     * @param plainText message (String) to encrypt
-     * @return the encrypted cipher text
-     * @throws IllegalBlockSizeException if the encryption fails
-     * @throws BadPaddingException       if the encryption fails
-     */
-    private String encrypt(String plainText) throws IllegalBlockSizeException, BadPaddingException {
-        LOGGER.info("Running ClientSender.encrypt()");
-        return Base64.getEncoder().encodeToString(this.encryptCipher.doFinal(plainText.getBytes()));
-    }
+  public String encrypt(String plainText) throws Exception {
+    Cipher cipher = Cipher.getInstance("RSA");
+    cipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
+    byte[] byteEncrypted = cipher.doFinal(plainText.getBytes());
+    String stringEncrypted = Base64.getEncoder().encodeToString(byteEncrypted);
+    return stringEncrypted;
+    
+  }
 }
 
+/*
+
+What happens if recipient is null? Then, according to the Java
+documentation, println will send the string "null" (not the same as
+null!). So maye we should check for that case! Paticularly in
+extensions of this system.
+
+ */

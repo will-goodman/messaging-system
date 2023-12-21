@@ -1,194 +1,241 @@
-package com.willgoodman.messagingsystem.server;
+package net.willgoodman.messagingsystem.server;
 
-import com.willgoodman.messagingsystem.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.willgoodman.messagingsystem.Message;
+import net.willgoodman.messagingsystem.Report;
 
 import java.io.*;
-import java.util.Hashtable;
+import java.util.concurrent.*;
+import java.util.ArrayList;
 import java.security.PrivateKey;
 import java.util.Base64;
-import java.util.Queue;
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 
+// Gets messages from client and puts them in a queue, for another
+// thread to forward to the appropriate client.
 
-/**
- * Receives commands from the client (ClientSender) and performs the appropriate actions
- */
 public class ServerReceiver extends Thread {
+  private String myClientsName;
+  private String threadName;
+  private BufferedReader myClient;
+  private ClientTable clientTable;
+  private MessageList messageList;
+  private int currentMessage = 0;
+  private boolean loggedIn;
+  private final PrivateKey PRIVATE_KEY;
+  private static final String QUIT_MESSAGE = "quit";
+  private static final String REGISTER = "register";
+  private static final String LOGIN = "login";
+  private static final String LOGOUT = "logout";
+  private static final String PREVIOUS = "previous";
+  private static final String NEXT = "next";
+  private static final String DELETE = "delete";
+  private static final String SEND = "send";
+  private static final String REGISTERED_MESSAGE = "Registered and logged in";
+  private static final String USER_EXISTS = "User already exists";
+  private static final String ALREADY_LOGGED_IN = "You are already logged in";
+  private static final String USER_LOGGED_IN_ALREADY = "User already logged in";
+  private static final String USER_DOESNT_EXIST = "User does not exist";
+  private static final String LOGGED_OUT = "Logged out";
+  private static final String NOONE_LOGGED_IN = "No user currently logged in";
+  private static final String RECIPIENT_DOESNT_EXIST = "Recipient does not exist";
+  private static final String THREAD_CANT_SLEEP = "Thread could not sleep";
+  private static final String DISCONNECTED = " disconnected";
+  private static final String QUIT_ERROR = "Quit message could not be sent back to the client";
+  private static final String CLIENT_ERROR = "Something went wrong with the client ";
+  
 
-    private static final Logger LOGGER = LogManager.getLogger(ServerReceiver.class);
-    private final String clientName;
-    private final BufferedReader fromClient;
-    private Hashtable<String, User> users;
-    private Hashtable<String, Queue<Message>> clients;
-    private Hashtable<String, String> loggedInUsers;
-    private Cipher DECRYPT_CIPHER;
+  public ServerReceiver(String n, BufferedReader c, ClientTable t, MessageList m, PrivateKey k) {
+    threadName = n;
+    myClientsName = n;
+    myClient = c;
+    clientTable = t;
+    messageList = m;
+    PRIVATE_KEY = k;
+    loggedIn = false;
+  }
 
-    /**
-     * Constructor
-     *
-     * @param clientName    name of the client this thread serves
-     * @param fromClient    receives messages/commands from the client
-     * @param privateKey    key used to decrypt messages from the client
-     * @param users         stores details about all users who have used the server
-     * @param clients       stores messages to be sent to clients (non-user specific)
-     * @param loggedInUsers stores details about which users are logged into which threads
-     */
-    public ServerReceiver(String clientName, BufferedReader fromClient, PrivateKey privateKey,
-                          Hashtable<String, User> users, Hashtable<String, Queue<Message>> clients,
-                          Hashtable<String, String> loggedInUsers) {
-        LOGGER.info("Constructing ServerReceiver");
-        this.clientName = clientName;
-        this.fromClient = fromClient;
-        this.users = users;
-        this.clients = clients;
-        this.loggedInUsers = loggedInUsers;
-
-        try {
-            this.DECRYPT_CIPHER = Cipher.getInstance(Config.ENCRYPTION_ALGORITHM);
-            this.DECRYPT_CIPHER.init(Cipher.DECRYPT_MODE, privateKey);
-            LOGGER.debug("Created decryption cipher");
-        } catch (Exception ex) {
-            LOGGER.fatal(String.format("Error initialising decryption cipher (%s)", ex.getMessage()));
-            System.exit(1);
-        }
-    }
-
-    /**
-     * Starts a new thread which handles any commands received from the client
-     */
-    public void run() {
-        LOGGER.info("Running ServerReceiver.run()");
+  public void run() {
+    try {
+      while (true) {
         String command = "";
-
         try {
-            while (!command.equals(Commands.QUIT)) {
+          command = decrypt(myClient.readLine()); // Matches CCCCC in ClientSender.java
+        } catch (Exception ex) {
+          Report.errorAndGiveUp("Couldn't decrypt");
+        }
+        //String text = myClient.readLine();      // Matches DDDDD in ClientSender.java
+        if (!command.equals(QUIT_MESSAGE)) {
+          String username = "";
+          if (command.equals(REGISTER) && !loggedIn) {
+              try {
+                username = decrypt(myClient.readLine());
+              } catch (Exception ex) {
 
-                command = decrypt(this.fromClient.readLine());
-                LOGGER.debug(String.format("Command from %s: %s", this.clientName, command));
+              }
+              if (!messageList.contains(username)) {
+                messageList.add(username);
+                clientTable.changeKey(username, myClientsName);
+                System.out.println(myClientsName + " changed to " + username);
+                myClientsName = username;
+                loggedIn = true;
+                Message msg = new Message(myClientsName, REGISTERED_MESSAGE);
+                BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+                myClientsQueue.offer(msg);
+              } else {
+                Message msg = new Message(myClientsName, USER_EXISTS);
+                BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+                myClientsQueue.offer(msg);
+                //System.out.println("User already exists");
+                //break;
+              }
+              
+          } else if (command.equals(LOGIN)) {
+            try {
+              username = decrypt(myClient.readLine());
+            } catch (Exception ex) {
 
-                switch (command) {
-                    case Commands.REGISTER:
-                        String username = decrypt(this.fromClient.readLine());
-                        if (!this.users.containsKey(username)) {
-                            this.users.put(username, new User(username));
-                            String message = String.format("User %s created by %s", username, this.clientName);
-                            LOGGER.debug(message);
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                        } else {
-                            String message = String.format("User %s already exists", username);
-                            LOGGER.debug(message);
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                        }
-                        break;
-                    case Commands.LOGIN:
-                        username = decrypt(this.fromClient.readLine());
-                        if (this.users.containsKey(username)) {
-                            this.loggedInUsers.put(this.clientName, username);
-                            String message = String.format("User %s logged into %s", username, this.clientName);
-                            LOGGER.debug(message);
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                        } else {
-                            String message = String.format("User %s does not exist", username);
-                            LOGGER.debug(message);
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                        }
-                        break;
-                    case Commands.LOGOUT:
-                        if (!this.loggedInUsers.containsKey(this.clientName)) {
-                            LOGGER.debug("No user currently logged in.");
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
-                        } else {
-                            username = this.loggedInUsers.get(this.clientName);
-                            this.loggedInUsers.remove(this.clientName);
-                            String message = String.format("User %s logged out of %s", username, this.clientName);
-                            LOGGER.debug(message);
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                        }
-                        break;
-                    case Commands.SEND:
-                        username = decrypt(this.fromClient.readLine());
-                        String message = decrypt(this.fromClient.readLine());
-                        if (!this.loggedInUsers.containsKey(this.clientName)) {
-                            LOGGER.debug("No user currently logged in.");
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
-                        } else {
-                            if (this.users.containsKey(username)) {
-                                LOGGER.debug(String.format("User %s (%s) sent message to user %s",
-                                        this.loggedInUsers.get(this.clientName), this.clientName, username));
-                                this.clients.get(this.clientName).offer(new Message(this.clientName, "Message sent."));
-                                this.users.get(username).getInbox().addMessage(new Message(this.loggedInUsers.get(this.clientName), message));
-                            } else {
-                                message = String.format("User %s does not exist", username);
-                                LOGGER.debug(message);
-                                this.clients.get(this.clientName).offer(new Message(this.clientName, message));
-                            }
-                        }
-                        break;
-                    case Commands.PREVIOUS:
-                        if (!this.loggedInUsers.containsKey(this.clientName)) {
-                            LOGGER.debug("No user currently logged in.");
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
-                        } else {
-                            LOGGER.debug(String.format("User %s moved backwards in inbox", this.loggedInUsers.get(this.clientName)));
-                            this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().moveBackwards();
-                        }
-                        break;
-                    case Commands.NEXT:
-                        if (!this.loggedInUsers.containsKey(this.clientName)) {
-                            LOGGER.debug("No user currently logged in.");
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
-                        } else {
-                            LOGGER.debug(String.format("User %s moved forwards in inbox", this.loggedInUsers.get(this.clientName)));
-                            this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().moveForwards();
-                        }
-                        break;
-                    case Commands.DELETE:
-                        if (!this.loggedInUsers.containsKey(this.clientName)) {
-                            LOGGER.debug("No user currently logged in.");
-                            this.clients.get(this.clientName).offer(new Message(this.clientName, "No user currently logged in."));
-                        } else {
-                            LOGGER.debug(String.format("User %s deleted message", this.loggedInUsers.get(this.clientName)));
-                            this.users.get(this.loggedInUsers.get(this.clientName)).getInbox().deleteMessage();
-                        }
-                        break;
-                    default:
-                        LOGGER.debug(String.format("Unrecognised command (%s) received from %s", command, this.clientName));
-                        break;
-                }
             }
-        } catch (IOException ex) {
-            LOGGER.error(String.format("Error reading from %s (%s)", this.clientName, ex.getMessage()));
-        } catch (IllegalBlockSizeException | BadPaddingException ex) {
-            LOGGER.error(String.format("Error decrypting message from %s (%s)", this.clientName, ex.getMessage()));
+            if (messageList.contains(username) && !loggedIn && !clientTable.contains(username)) {
+              clientTable.changeKey(username, myClientsName);              
+              System.out.println(username + " logged in");
+              myClientsName = username;
+              loggedIn = true;
+              
+              
+              Message msg = new Message(myClientsName, "login - " + myClientsName);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+              //Add code for most recent message
+            } else if (clientTable.contains(username)) {
+              //System.out.println("User already logged in");
+              Message msg = new Message(myClientsName, USER_LOGGED_IN_ALREADY);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+            } else if (loggedIn){
+              Message msg = new Message(myClientsName, ALREADY_LOGGED_IN);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+
+            } else {
+              //System.out.println("User does not exist");
+              Message msg = new Message(myClientsName, USER_DOESNT_EXIST);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+              //break;
+            }
+            
+          } else if (command.equals(LOGOUT)) {
+            if (loggedIn) {
+              //clientTable.changeKey(originalThreadName, myClientsName);
+              clientTable.changeKey(threadName, myClientsName);
+              System.out.println(myClientsName + " logged out");
+              myClientsName = threadName;
+              Message msg = new Message(myClientsName, LOGGED_OUT);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg); 
+              loggedIn = false;
+              
+            } else {
+              Message msg = new Message(myClientsName, NOONE_LOGGED_IN);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+            }
+            
+          } else if (command.equals(SEND)) {
+            String message = "";
+            try {
+              username = decrypt(myClient.readLine());
+              message = decrypt(myClient.readLine());
+            } catch (Exception ex) {
+
+            }
+            //Must check that user is logged in first
+            if (loggedIn) {
+              if (messageList.contains(username)) {
+                      
+                Message msg = new Message(myClientsName, message);
+                ArrayList<Message> recipientsList = messageList.get(username);
+                recipientsList.add(msg);
+                if (clientTable.contains(username)) {
+                  Message msg2 = new Message(myClientsName, "new message - " + username);
+                  BlockingQueue<Message> recipientsQueue = clientTable.getQueue(username);
+                  recipientsQueue.offer(msg2);
+                }
+               
+              } else {
+                Message msg = new Message(myClientsName, RECIPIENT_DOESNT_EXIST);
+                BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+                myClientsQueue.offer(msg);
+                //System.out.println("Recipient does not exist");
+              }
+            } else {
+              Message msg = new Message(myClientsName, NOONE_LOGGED_IN);
+              BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+              myClientsQueue.offer(msg);
+              //System.out.println("No user logged in");
+            }
+          } else if (command.equals(PREVIOUS)) {
+      
+            Message msg = new Message(myClientsName, "previous - " + myClientsName);
+            BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+            myClientsQueue.offer(msg);
+          
+          } else if (command.equals(NEXT)) {
+        
+            Message msg = new Message(myClientsName, "next - " + myClientsName);
+            BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+            myClientsQueue.offer(msg);            
+       
+
+          } else if (command.equals(DELETE)) {
+            Message msg = new Message(myClientsName, "delete - " + myClientsName);
+            BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+            myClientsQueue.offer(msg);
+
+            
+          }
+        
+        } else if (command.equals(QUIT_MESSAGE)) {
+            Message msg = new Message(threadName, QUIT_MESSAGE);
+            BlockingQueue<Message> myClientsQueue = clientTable.getQueue(myClientsName);
+            if (myClientsQueue != null) {
+                myClientsQueue.offer(msg);
+                if (loggedIn) {
+                  clientTable.changeKey(threadName, myClientsName);
+                  myClientsName = threadName;
+                  loggedIn = false;
+                }
+                //ClientReceiver must close before we remove the client from the ClientTable, otherwise ClientReceiver will not be able to receive the "quit" message
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Report.error(THREAD_CANT_SLEEP);
+                }
+                clientTable.remove(threadName);
+                System.out.println(threadName + DISCONNECTED);
+            } else {
+                Report.error(QUIT_ERROR);
+            }
+            break;
+        } 
+        else
+          // No point in closing socket. Just give up.
+          return;
         }
-
-        LOGGER.debug(String.format("%s quit", this.clientName));
-
-        Thread.yield();  // a message may currently being sent to the client
-        this.clients.remove(this.clientName);
-        try {
-            this.fromClient.close();
-        } catch (IOException ex) {
-            LOGGER.fatal(String.format("Error closing connection with %s (%s)", this.clientName, ex.getMessage()));
-        }
+      } catch (Exception e) {
+        Report.error(CLIENT_ERROR
+                   + myClientsName + " " + e.getMessage()); 
+        // No point in trying to close sockets. Just give up.
+        // We end this thread (we don't do System.exit(1)).
     }
+  }
 
-    /**
-     * Decrypts a message (String) received from a client.
-     *
-     * @param cipherText the original Base64 encoded cipher text
-     * @return the decrypted String message
-     * @throws IllegalBlockSizeException if the decryption fails
-     * @throws BadPaddingException       if the decryption fails
-     */
-    private String decrypt(String cipherText) throws IllegalBlockSizeException, BadPaddingException {
-        LOGGER.info("Running ServerReceiver.decrypt()");
-        return new String(DECRYPT_CIPHER.doFinal(Base64.getDecoder().decode(cipherText)));
-    }
-
+  public String decrypt(String encrypted) throws Exception {
+    byte [] byteEncrypted = Base64.getDecoder().decode(encrypted);
+    Cipher cipher = Cipher.getInstance("RSA");
+    cipher.init(Cipher.DECRYPT_MODE, PRIVATE_KEY);
+    byte[] bytePlainText = cipher.doFinal(byteEncrypted);
+    return new String (bytePlainText);
+  }
 }
 
